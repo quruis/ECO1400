@@ -1,0 +1,236 @@
+---
+title: "ECO1400 - Term Paper"
+author: "Justine Isaac and Sheva Serrattan"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Install and load required R packages
+```{r, message=FALSE}
+if (!require("plm")) install.packages("plm")
+if (!require("stargazer")) install.packages("stargazer")
+library(plm) # function: plm
+library(stargazer)
+# Set the graphical theme
+ggplot2::theme_set(ggplot2::theme_light())
+
+if (!require("rmarkdown")) install.packages("rmarkdown")
+if (!require("AER")) install.packages("AER")
+if (!require("glmnet")) install.packages("glmnet")
+if (!require("stargazer")) install.packages("stargazer")
+if (!require("ARDL")) install.packages("ARDL")
+if (!require("readxl")) install.packages("readxl")
+if (!require("urca")) install.packages("urca")
+if (!require("lmtest")) install.packages("lmtest")
+#if (!require("tsdyn")) install.packages("tsDyn")
+library(urca)
+library(AER) # function: ivreg()
+library(stargazer) # functions: stargazer
+library(readxl)
+library(tseries)
+library(ARDL)
+library(lmtest)
+library(tsDyn)
+library(vars) # Load package
+```
+
+```{r}
+data <-read.csv("https://raw.githubusercontent.com/quruis/ECON1400/main/Labour_data_TT.csv")
+df <- data[c(1:112),]
+```
+
+```{r}
+plot(df$petro)
+adf.test(df$petro)
+plot(df$agri)
+adf.test(df$agri)
+plot(df$cons)
+adf.test(df$cons)
+plot(df$manu)
+adf.test(df$manu)
+plot(df$SPI)
+adf.test(df$SPI)
+plot(df$PerREA)
+adf.test(df$PerREA)
+plot(df$WTI)
+adf.test(df$WTI)
+ADF <- list(adf.test(df$petro),adf.test(df$agri),adf.test(df$cons),adf.test(df$manu),adf.test(df$SPI),adf.test(df$PerREA),adf.test(df$WTI))
+ADFplots <- list(plot(df$petro),plot(df$agri),plot(df$cons),plot(df$manu),plot(df$SPI),plot(df$PerREA),plot(df$WTI))
+```
+```{r}
+df2 <- data.frame(diff(df$petro),diff(df$agri),diff(df$cons),diff(df$manu),diff(df$SPI),diff(df$PerREA),diff(df$WTI)) 
+colnames(df2)<-c("d_petro","d_agri","d_cons","d_manu","d_SPI","d_PerREA","d_WTI")
+```
+
+```{r}
+plot(df2$d_petro)
+adf.test(df2$d_petro)
+plot(df2$d_agri)
+adf.test(df2$d_agri)
+plot(df2$d_cons)
+adf.test(df2$d_cons)
+plot(df2$d_manu)
+adf.test(df2$d_manu)
+plot(df2$d_SPI)
+adf.test(df2$d_SPI)
+plot(df2$d_PerREA)
+adf.test(df2$d_PerREA)
+plot(df2$d_WTI)
+adf.test(df2$d_WTI)
+```
+
+```{r}
+
+# Estimate VAR
+VAR_lag<-VARselect(df2[c(2,3,4,7)], lag.max = 8, type = c("const", "trend", "both", "none"),
+season = NULL, exogen = df2[7])
+
+# Lag order suggested by AIC
+#var_aic$p
+```
+
+```{r}
+# Estimate
+vec_emp <- ca.jo(df[c(3,4,5,9)], ecdet = "none", type = "trace",
+             K = 3, spec = "transitory", season = NULL)
+
+summary(vec_emp)
+```
+Estimate VEC model 
+```{r}
+model_VEC_emp <- lineVar(df[c(9,3,4,5)], lag=3, r=1, include="both", model="VECM", estim="ML", 
+                     exogen=df[9])
+
+summary(model_VEC_emp)
+```
+
+```{r}
+# Estimate VAR
+var_lag_econ<-VARselect(df2[c(5:7)], lag.max = 8, type = c("const", "trend", "both", "none"),
+season = NULL, exogen = df2[7])
+
+# Lag order suggested by AIC
+#var_aic$p
+```
+
+```{r}
+# Estimate
+vec <- ca.jo(df[c(5:7)], ecdet = "none", type = "trace",
+             K = 8, spec = "transitory", season = NULL)
+
+summary(vec)
+```
+
+Estimate VEC model 
+```{r}
+model_VEC <- lineVar(df[c(9,8,7)], lag=4, r=1, include="both", model="VECM", estim="ML", 
+                     exogen=df[9])
+
+summary(model_VEC)
+```
+
+```{r}
+logdf <- data.frame(log(df$SPI),df$PerREA,log(df$WTI))
+colnames(logdf)<-c("log_SPI","PerREA","log_WTI")
+```
+
+```{r}
+plot(logdf$log_SPI)
+adf.test(logdf$log_SPI)
+plot(logdf$PerREA)
+adf.test(logdf$PerREA)
+plot(logdf$log_WTI)
+adf.test(logdf$log_WTI)
+```
+```{r}
+logdf2 <- data.frame(diff(logdf$log_SPI),diff(logdf$PerREA),diff(logdf$log_WTI)) 
+colnames(logdf2)<-c("d_log_SPI","d_PerREA","d_log_WTI")
+```
+
+```{r}
+plot(logdf2$d_log_SPI)
+adf.test(logdf2$d_log_SPI)
+plot(logdf2$d_PerREA)
+adf.test(logdf2$d_PerREA)
+plot(logdf2$d_log_WTI)
+adf.test(logdf2$d_log_WTI)
+```
+
+```{r}
+# Estimate VAR
+VAR_lag_log<-VARselect(logdf2[1:2], lag.max = 8, type = c("const", "trend", "both", "none"),
+season = NULL, exogen = logdf2[3])
+
+# Lag order suggested by AIC
+#var_aic$p
+```
+
+```{r}
+# Estimate
+vec_log <- ca.jo(logdf, ecdet = "none", type = "trace",
+             K = 4, spec = "transitory", season = NULL)
+
+summary(vec_log)
+```
+
+Estimate VEC model 
+```{r}
+model_VEC_log <- lineVar(logdf, lag=4, r=1, include="both", model="VECM", estim="ML", 
+                     exogen=NULL)
+
+summary(model_VEC_log)
+```
+Estimate VAR model for economic data
+```{r}
+var.aic <- VAR(df2[5:6], type = "none", lag.max = 3, ic = "AIC", exogen = df2[7])
+
+summary(var.aic)
+```
+
+Estimate VAR model for economic data
+```{r}
+var.aic.log <- VAR(logdf2[1:2], type = "none", lag.max = 8, ic = "AIC", exogen = logdf2[3])
+
+summary(var.aic.log)
+```
+```{r warning=FALSE}
+stargazer(VAR_lag, title="Results to select number of lags for employment model", 
+          no.space = TRUE, omit.stat=c("f", "ser"))
+
+```
+```{r warning=FALSE}
+stargazer(var_lag_econ, title="Results to select number of lags for economic performance model", 
+          no.space = TRUE, omit.stat=c("f", "ser"))
+
+```
+
+```{r warning=FALSE}
+stargazer(VAR_lag_log, title="Results to select number of lags for economic performance model", 
+          no.space = TRUE, omit.stat=c("f", "ser"))
+
+```
+
+```{r}
+
+# Extract coefficients and other information
+vecm_coefs <- coef(model_VEC_emp)
+
+# Access coefficients and cointegrating vector
+vecm_lagged_diff_coefs <- vecm_coefs[, 1:4]
+vecm_cointegrating_vector <- vecm_coefs[, 16]
+
+# Create a data frame for the coefficients
+coefficients_df <- data.frame(cbind(vecm_lagged_diff_coefs, vecm_cointegrating_vector))
+
+# Save coefficients to a CSV file
+write.csv(coefficients_df, "vecm_coefficients.csv", row.names = FALSE)
+```
+
+
